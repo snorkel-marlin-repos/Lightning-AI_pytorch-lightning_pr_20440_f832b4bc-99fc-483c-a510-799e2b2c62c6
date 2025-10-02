@@ -13,8 +13,7 @@
 # limitations under the License.
 import shutil
 import warnings
-from collections.abc import Generator
-from contextlib import AbstractContextManager, ExitStack, nullcontext
+from contextlib import ExitStack, nullcontext
 from datetime import timedelta
 from functools import partial
 from pathlib import Path
@@ -22,8 +21,15 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    ContextManager,
+    Dict,
+    Generator,
+    List,
     Literal,
     Optional,
+    Set,
+    Tuple,
+    Type,
     Union,
 )
 
@@ -72,7 +78,7 @@ if TYPE_CHECKING:
     from torch.distributed.fsdp.fully_sharded_data_parallel import CPUOffload, MixedPrecision, ShardingStrategy
     from torch.distributed.fsdp.wrap import ModuleWrapPolicy
 
-    _POLICY = Union[set[type[Module]], Callable[[Module, bool, int], bool], ModuleWrapPolicy]
+    _POLICY = Union[Set[Type[Module]], Callable[[Module, bool, int], bool], ModuleWrapPolicy]
     _SHARDING_STRATEGY = Union[ShardingStrategy, Literal["FULL_SHARD", "SHARD_GRAD_OP", "NO_SHARD", "HYBRID_SHARD"]]
 
 
@@ -137,7 +143,7 @@ class FSDPStrategy(ParallelStrategy, _Sharded):
     def __init__(
         self,
         accelerator: Optional[Accelerator] = None,
-        parallel_devices: Optional[list[torch.device]] = None,
+        parallel_devices: Optional[List[torch.device]] = None,
         cluster_environment: Optional[ClusterEnvironment] = None,
         precision: Optional[Precision] = None,
         process_group_backend: Optional[str] = None,
@@ -145,11 +151,11 @@ class FSDPStrategy(ParallelStrategy, _Sharded):
         cpu_offload: Union[bool, "CPUOffload", None] = None,
         mixed_precision: Optional["MixedPrecision"] = None,
         auto_wrap_policy: Optional["_POLICY"] = None,
-        activation_checkpointing: Optional[Union[type[Module], list[type[Module]]]] = None,
+        activation_checkpointing: Optional[Union[Type[Module], List[Type[Module]]]] = None,
         activation_checkpointing_policy: Optional["_POLICY"] = None,
         sharding_strategy: "_SHARDING_STRATEGY" = "FULL_SHARD",
         state_dict_type: Literal["full", "sharded"] = "sharded",
-        device_mesh: Optional[Union[tuple[int], "DeviceMesh"]] = None,
+        device_mesh: Optional[Union[Tuple[int], "DeviceMesh"]] = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(
@@ -210,7 +216,7 @@ class FSDPStrategy(ParallelStrategy, _Sharded):
 
     @property
     @override
-    def distributed_sampler_kwargs(self) -> dict[str, Any]:
+    def distributed_sampler_kwargs(self) -> Dict[str, Any]:
         return {"num_replicas": (self.num_nodes * self.num_processes), "rank": self.global_rank}
 
     @property
@@ -261,8 +267,8 @@ class FSDPStrategy(ParallelStrategy, _Sharded):
 
     @override
     def setup_module_and_optimizers(
-        self, module: Module, optimizers: list[Optimizer]
-    ) -> tuple[Module, list[Optimizer]]:
+        self, module: Module, optimizers: List[Optimizer]
+    ) -> Tuple[Module, List[Optimizer]]:
         """Wraps the model into a :class:`~torch.distributed.fsdp.fully_sharded_data_parallel.FullyShardedDataParallel`
         module and sets `use_orig_params=True` to keep the reference to the original parameters in the optimizer."""
         use_orig_params = self._fsdp_kwargs.get("use_orig_params")
@@ -334,7 +340,7 @@ class FSDPStrategy(ParallelStrategy, _Sharded):
         pass
 
     @override
-    def module_init_context(self, empty_init: Optional[bool] = None) -> AbstractContextManager:
+    def module_init_context(self, empty_init: Optional[bool] = None) -> ContextManager:
         precision_init_ctx = self.precision.module_init_context()
         module_sharded_ctx = self.module_sharded_context()
         stack = ExitStack()
@@ -348,7 +354,7 @@ class FSDPStrategy(ParallelStrategy, _Sharded):
         return stack
 
     @override
-    def module_sharded_context(self) -> AbstractContextManager:
+    def module_sharded_context(self) -> ContextManager:
         from torch.distributed.fsdp.fully_sharded_data_parallel import FullyShardedDataParallel
         from torch.distributed.fsdp.wrap import enable_wrap
 
@@ -413,9 +419,9 @@ class FSDPStrategy(ParallelStrategy, _Sharded):
     def save_checkpoint(
         self,
         path: _PATH,
-        state: dict[str, Union[Module, Optimizer, Any]],
+        state: Dict[str, Union[Module, Optimizer, Any]],
         storage_options: Optional[Any] = None,
-        filter: Optional[dict[str, Callable[[str, Any], bool]]] = None,
+        filter: Optional[Dict[str, Callable[[str, Any], bool]]] = None,
     ) -> None:
         """Save model, optimizer, and other state to a checkpoint on disk.
 
@@ -467,8 +473,8 @@ class FSDPStrategy(ParallelStrategy, _Sharded):
 
             # replace the modules and optimizer objects in the state with their local state dict
             # and separate the user's metadata
-            converted_state: dict[str, Any] = {}
-            metadata: dict[str, Any] = {}
+            converted_state: Dict[str, Any] = {}
+            metadata: Dict[str, Any] = {}
             with state_dict_ctx:
                 for key, obj in state.items():
                     converted: Any
@@ -493,7 +499,7 @@ class FSDPStrategy(ParallelStrategy, _Sharded):
                 shutil.rmtree(path)
 
             state_dict_ctx = _get_full_state_dict_context(module, world_size=self.world_size)
-            full_state: dict[str, Any] = {}
+            full_state: Dict[str, Any] = {}
             with state_dict_ctx:
                 for key, obj in state.items():
                     if isinstance(obj, Module):
@@ -513,9 +519,9 @@ class FSDPStrategy(ParallelStrategy, _Sharded):
     def load_checkpoint(
         self,
         path: _PATH,
-        state: Optional[Union[Module, Optimizer, dict[str, Union[Module, Optimizer, Any]]]] = None,
+        state: Optional[Union[Module, Optimizer, Dict[str, Union[Module, Optimizer, Any]]]] = None,
         strict: bool = True,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Load the contents from a checkpoint and restore the state of the given objects."""
         if not state:
             raise ValueError(
@@ -677,9 +683,9 @@ class FSDPStrategy(ParallelStrategy, _Sharded):
 
 
 def _activation_checkpointing_kwargs(
-    activation_checkpointing: Optional[Union[type[Module], list[type[Module]]]],
+    activation_checkpointing: Optional[Union[Type[Module], List[Type[Module]]]],
     activation_checkpointing_policy: Optional["_POLICY"],
-) -> dict:
+) -> Dict:
     if activation_checkpointing is None and activation_checkpointing_policy is None:
         return {}
     if activation_checkpointing is not None and activation_checkpointing_policy is not None:
@@ -701,7 +707,7 @@ def _activation_checkpointing_kwargs(
     return {"auto_wrap_policy": activation_checkpointing_policy}
 
 
-def _auto_wrap_policy_kwargs(policy: Optional["_POLICY"], kwargs: dict) -> dict:
+def _auto_wrap_policy_kwargs(policy: Optional["_POLICY"], kwargs: Dict) -> Dict:
     if policy is None:
         return kwargs
     if isinstance(policy, set):
@@ -713,7 +719,7 @@ def _auto_wrap_policy_kwargs(policy: Optional["_POLICY"], kwargs: dict) -> dict:
     return kwargs
 
 
-def _setup_activation_checkpointing(module: Module, activation_checkpointing_kwargs: dict) -> None:
+def _setup_activation_checkpointing(module: Module, activation_checkpointing_kwargs: Dict) -> None:
     if not activation_checkpointing_kwargs:
         return
 
@@ -739,7 +745,7 @@ def _setup_activation_checkpointing(module: Module, activation_checkpointing_kwa
 
 class _FSDPBackwardSyncControl(_BackwardSyncControl):
     @override
-    def no_backward_sync(self, module: Module, enabled: bool) -> AbstractContextManager:
+    def no_backward_sync(self, module: Module, enabled: bool) -> ContextManager:
         """Blocks gradient synchronization inside the :class:`~torch.distributed.fsdp.FullyShardedDataParallel`
         wrapper."""
         if not enabled:
@@ -762,7 +768,7 @@ def _init_cpu_offload(cpu_offload: Optional[Union[bool, "CPUOffload"]]) -> "CPUO
     return cpu_offload if isinstance(cpu_offload, CPUOffload) else CPUOffload(offload_params=bool(cpu_offload))
 
 
-def _init_sharding_strategy(sharding_strategy: "_SHARDING_STRATEGY", kwargs: dict) -> "ShardingStrategy":
+def _init_sharding_strategy(sharding_strategy: "_SHARDING_STRATEGY", kwargs: Dict) -> "ShardingStrategy":
     from torch.distributed.fsdp import ShardingStrategy
 
     if kwargs.get("process_group") is not None and kwargs.get("device_mesh") is not None:
@@ -852,7 +858,7 @@ def _move_torchmetrics_to_device(module: torch.nn.Module, device: torch.device) 
         metric.to(device)  # `.to()` is in-place
 
 
-def _distributed_checkpoint_save(converted_state: dict[str, Any], path: Path) -> None:
+def _distributed_checkpoint_save(converted_state: Dict[str, Any], path: Path) -> None:
     if _TORCH_GREATER_EQUAL_2_3:
         from torch.distributed.checkpoint import save
 
@@ -871,7 +877,7 @@ def _distributed_checkpoint_save(converted_state: dict[str, Any], path: Path) ->
         save(converted_state, writer)
 
 
-def _distributed_checkpoint_load(module_state: dict[str, Any], path: Path) -> None:
+def _distributed_checkpoint_load(module_state: Dict[str, Any], path: Path) -> None:
     if _TORCH_GREATER_EQUAL_2_3:
         from torch.distributed.checkpoint import load
 

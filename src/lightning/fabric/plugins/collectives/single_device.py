@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, List
 
 from torch import Tensor
 from typing_extensions import override
@@ -37,31 +37,31 @@ class SingleDeviceCollective(Collective):
         return tensor
 
     @override
-    def all_gather(self, tensor_list: list[Tensor], tensor: Tensor, **__: Any) -> list[Tensor]:
+    def all_gather(self, tensor_list: List[Tensor], tensor: Tensor, **__: Any) -> List[Tensor]:
         return [tensor]
 
     @override
-    def gather(self, tensor: Tensor, *_: Any, **__: Any) -> list[Tensor]:
+    def gather(self, tensor: Tensor, *_: Any, **__: Any) -> List[Tensor]:
         return [tensor]
 
     @override
     def scatter(
         self,
         tensor: Tensor,
-        scatter_list: list[Tensor],
+        scatter_list: List[Tensor],
         *_: Any,
         **__: Any,
     ) -> Tensor:
         return scatter_list[0]
 
     @override
-    def reduce_scatter(self, output: Tensor, input_list: list[Tensor], *_: Any, **__: Any) -> Tensor:
+    def reduce_scatter(self, output: Tensor, input_list: List[Tensor], *_: Any, **__: Any) -> Tensor:
         return input_list[0]
 
     @override
     def all_to_all(
-        self, output_tensor_list: list[Tensor], input_tensor_list: list[Tensor], *_: Any, **__: Any
-    ) -> list[Tensor]:
+        self, output_tensor_list: List[Tensor], input_tensor_list: List[Tensor], *_: Any, **__: Any
+    ) -> List[Tensor]:
         return input_tensor_list
 
     @override

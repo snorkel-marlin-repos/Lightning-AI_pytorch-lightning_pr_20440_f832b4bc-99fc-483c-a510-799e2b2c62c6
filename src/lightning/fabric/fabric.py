@@ -13,14 +13,20 @@
 # limitations under the License.
 import inspect
 import os
-from collections.abc import Generator, Mapping, Sequence
-from contextlib import AbstractContextManager, contextmanager, nullcontext
+from contextlib import contextmanager, nullcontext
 from functools import partial
 from pathlib import Path
 from typing import (
     Any,
     Callable,
+    ContextManager,
+    Dict,
+    Generator,
+    List,
+    Mapping,
     Optional,
+    Sequence,
+    Tuple,
     Union,
     cast,
     overload,
@@ -112,12 +118,12 @@ class Fabric:
         *,
         accelerator: Union[str, Accelerator] = "auto",
         strategy: Union[str, Strategy] = "auto",
-        devices: Union[list[int], str, int] = "auto",
+        devices: Union[List[int], str, int] = "auto",
         num_nodes: int = 1,
         precision: Optional[_PRECISION_INPUT] = None,
-        plugins: Optional[Union[_PLUGIN_INPUT, list[_PLUGIN_INPUT]]] = None,
-        callbacks: Optional[Union[list[Any], Any]] = None,
-        loggers: Optional[Union[Logger, list[Logger]]] = None,
+        plugins: Optional[Union[_PLUGIN_INPUT, List[_PLUGIN_INPUT]]] = None,
+        callbacks: Optional[Union[List[Any], Any]] = None,
+        loggers: Optional[Union[Logger, List[Logger]]] = None,
     ) -> None:
         self._connector = _Connector(
             accelerator=accelerator,
@@ -186,7 +192,7 @@ class Fabric:
         return self._strategy.is_global_zero
 
     @property
-    def loggers(self) -> list[Logger]:
+    def loggers(self) -> List[Logger]:
         """Returns all loggers passed to Fabric."""
         return self._loggers
 
@@ -320,7 +326,7 @@ class Fabric:
         self._models_setup += 1
         return module
 
-    def setup_optimizers(self, *optimizers: Optimizer) -> Union[_FabricOptimizer, tuple[_FabricOptimizer, ...]]:
+    def setup_optimizers(self, *optimizers: Optimizer) -> Union[_FabricOptimizer, Tuple[_FabricOptimizer, ...]]:
         r"""Set up one or more optimizers for accelerated training.
 
         Some strategies do not allow setting up model and optimizer independently. For them, you should call
@@ -343,7 +349,7 @@ class Fabric:
 
     def setup_dataloaders(
         self, *dataloaders: DataLoader, use_distributed_sampler: bool = True, move_to_device: bool = True
-    ) -> Union[DataLoader, list[DataLoader]]:
+    ) -> Union[DataLoader, List[DataLoader]]:
         r"""Set up one or multiple dataloaders for accelerated training. If you need different settings for each
         dataloader, call this method individually for each one.
 
@@ -483,7 +489,7 @@ class Fabric:
             )
         raise ValueError("You have to specify either `clip_val` or `max_norm` to do gradient clipping!")
 
-    def autocast(self) -> AbstractContextManager:
+    def autocast(self) -> ContextManager:
         """A context manager to automatically convert operations for the chosen precision.
 
         Use this only if the `forward` method of your model does not cover all operations you wish to run with the
@@ -558,8 +564,8 @@ class Fabric:
         return self._strategy.broadcast(obj, src=src)
 
     def all_gather(
-        self, data: Union[Tensor, dict, list, tuple], group: Optional[Any] = None, sync_grads: bool = False
-    ) -> Union[Tensor, dict, list, tuple]:
+        self, data: Union[Tensor, Dict, List, Tuple], group: Optional[Any] = None, sync_grads: bool = False
+    ) -> Union[Tensor, Dict, List, Tuple]:
         """Gather tensors or collections of tensors from multiple processes.
 
         This method needs to be called on all processes and the tensors need to have the same shape across all
@@ -583,10 +589,10 @@ class Fabric:
 
     def all_reduce(
         self,
-        data: Union[Tensor, dict, list, tuple],
+        data: Union[Tensor, Dict, List, Tuple],
         group: Optional[Any] = None,
         reduce_op: Optional[Union[ReduceOp, str]] = "mean",
-    ) -> Union[Tensor, dict, list, tuple]:
+    ) -> Union[Tensor, Dict, List, Tuple]:
         """Reduce tensors or collections of tensors from multiple processes.
 
         The reduction on tensors is applied in-place, meaning the result will be placed back into the input tensor.
@@ -633,7 +639,7 @@ class Fabric:
             if rank == 0:
                 barrier()
 
-    def no_backward_sync(self, module: _FabricModule, enabled: bool = True) -> AbstractContextManager:
+    def no_backward_sync(self, module: _FabricModule, enabled: bool = True) -> ContextManager:
         r"""Skip gradient synchronization during backward to avoid redundant communication overhead.
 
         Use this context manager when performing gradient accumulation to speed up training with multiple devices.
@@ -675,7 +681,7 @@ class Fabric:
         forward_module, _ = _unwrap_compiled(module._forward_module)
         return self._strategy._backward_sync_control.no_backward_sync(forward_module, enabled)
 
-    def sharded_model(self) -> AbstractContextManager:
+    def sharded_model(self) -> ContextManager:
         r"""Instantiate a model under this context manager to prepare it for model-parallel sharding.
 
         .. deprecated:: This context manager is deprecated in favor of :meth:`init_module`, use it instead.
@@ -687,12 +693,12 @@ class Fabric:
             return self.strategy.module_sharded_context()
         return nullcontext()
 
-    def init_tensor(self) -> AbstractContextManager:
+    def init_tensor(self) -> ContextManager:
         """Tensors that you instantiate under this context manager will be created on the device right away and have
         the right data type depending on the precision setting in Fabric."""
         return self._strategy.tensor_init_context()
 
-    def init_module(self, empty_init: Optional[bool] = None) -> AbstractContextManager:
+    def init_module(self, empty_init: Optional[bool] = None) -> ContextManager:
         """Instantiate the model and its parameters under this context manager to reduce peak memory usage.
 
         The parameters get created on the device and with the right data type right away without wasting memory being
@@ -710,8 +716,8 @@ class Fabric:
     def save(
         self,
         path: Union[str, Path],
-        state: dict[str, Union[nn.Module, Optimizer, Any]],
-        filter: Optional[dict[str, Callable[[str, Any], bool]]] = None,
+        state: Dict[str, Union[nn.Module, Optimizer, Any]],
+        filter: Optional[Dict[str, Callable[[str, Any], bool]]] = None,
     ) -> None:
         r"""Save checkpoint contents to a file.
 
@@ -744,9 +750,9 @@ class Fabric:
     def load(
         self,
         path: Union[str, Path],
-        state: Optional[dict[str, Union[nn.Module, Optimizer, Any]]] = None,
+        state: Optional[Dict[str, Union[nn.Module, Optimizer, Any]]] = None,
         strict: bool = True,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Load a checkpoint from a file and restore the state of objects (modules, optimizers, etc.)
 
         How and which processes load gets determined by the `strategy`.
@@ -927,7 +933,7 @@ class Fabric:
         with _replace_dunder_methods(DataLoader, "dataset"), _replace_dunder_methods(BatchSampler):
             return to_run(*args, **kwargs)
 
-    def _move_model_to_device(self, model: nn.Module, optimizers: list[Optimizer]) -> nn.Module:
+    def _move_model_to_device(self, model: nn.Module, optimizers: List[Optimizer]) -> nn.Module:
         try:
             initial_name, initial_param = next(model.named_parameters())
         except StopIteration:
@@ -1055,7 +1061,7 @@ class Fabric:
             raise TypeError("Only PyTorch DataLoader are currently supported in `setup_dataloaders`.")
 
     @staticmethod
-    def _configure_callbacks(callbacks: Optional[Union[list[Any], Any]]) -> list[Any]:
+    def _configure_callbacks(callbacks: Optional[Union[List[Any], Any]]) -> List[Any]:
         callbacks = callbacks if callbacks is not None else []
         callbacks = callbacks if isinstance(callbacks, list) else [callbacks]
         callbacks.extend(_load_external_callbacks("lightning.fabric.callbacks_factory"))

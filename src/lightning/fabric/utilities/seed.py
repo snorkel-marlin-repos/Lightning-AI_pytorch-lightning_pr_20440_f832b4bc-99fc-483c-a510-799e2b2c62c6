@@ -3,7 +3,7 @@ import os
 import random
 from random import getstate as python_get_rng_state
 from random import setstate as python_set_rng_state
-from typing import Any, Optional
+from typing import Any, Dict, List, Optional
 
 import torch
 
@@ -104,13 +104,10 @@ def pl_worker_init_function(worker_id: int, rank: Optional[int] = None) -> None:
     if _NUMPY_AVAILABLE:
         import numpy as np
 
-        ss = np.random.SeedSequence([base_seed, worker_id, global_rank])
-        np_rng_seed = ss.generate_state(4)
-
-        np.random.seed(np_rng_seed)
+        np.random.seed(seed_sequence[3] & 0xFFFFFFFF)  # numpy takes 32-bit seed only
 
 
-def _generate_seed_sequence(base_seed: int, worker_id: int, global_rank: int, count: int) -> list[int]:
+def _generate_seed_sequence(base_seed: int, worker_id: int, global_rank: int, count: int) -> List[int]:
     """Generates a sequence of seeds from a base seed, worker id and rank using the linear congruential generator (LCG)
     algorithm."""
     # Combine base seed, worker id and rank into a unique 64-bit number
@@ -123,7 +120,7 @@ def _generate_seed_sequence(base_seed: int, worker_id: int, global_rank: int, co
     return seeds
 
 
-def _collect_rng_states(include_cuda: bool = True) -> dict[str, Any]:
+def _collect_rng_states(include_cuda: bool = True) -> Dict[str, Any]:
     r"""Collect the global random state of :mod:`torch`, :mod:`torch.cuda`, :mod:`numpy` and Python."""
     states = {
         "torch": torch.get_rng_state(),
@@ -138,7 +135,7 @@ def _collect_rng_states(include_cuda: bool = True) -> dict[str, Any]:
     return states
 
 
-def _set_rng_states(rng_state_dict: dict[str, Any]) -> None:
+def _set_rng_states(rng_state_dict: Dict[str, Any]) -> None:
     r"""Set the global random state of :mod:`torch`, :mod:`torch.cuda`, :mod:`numpy` and Python in the current
     process."""
     torch.set_rng_state(rng_state_dict["torch"])

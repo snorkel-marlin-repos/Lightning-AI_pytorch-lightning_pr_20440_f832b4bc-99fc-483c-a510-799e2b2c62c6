@@ -11,10 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import fields
-from typing import Any, Callable, Optional, Union, overload
+from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Union, overload
 from weakref import proxy
 
 import torch
@@ -173,7 +172,7 @@ class LightningOptimizer:
 
 def _init_optimizers_and_lr_schedulers(
     model: "pl.LightningModule",
-) -> tuple[list[Optimizer], list[LRSchedulerConfig]]:
+) -> Tuple[List[Optimizer], List[LRSchedulerConfig]]:
     """Calls `LightningModule.configure_optimizers` and parses and validates the output."""
     from lightning.pytorch.trainer import call
 
@@ -198,8 +197,8 @@ def _init_optimizers_and_lr_schedulers(
 
 
 def _configure_optimizers(
-    optim_conf: Union[dict[str, Any], list, Optimizer, tuple],
-) -> tuple[list, list, Optional[str]]:
+    optim_conf: Union[Dict[str, Any], List, Optimizer, Tuple],
+) -> Tuple[List, List, Optional[str]]:
     optimizers, lr_schedulers = [], []
     monitor = None
 
@@ -247,7 +246,7 @@ def _configure_optimizers(
     return optimizers, lr_schedulers, monitor
 
 
-def _configure_schedulers_automatic_opt(schedulers: list, monitor: Optional[str]) -> list[LRSchedulerConfig]:
+def _configure_schedulers_automatic_opt(schedulers: list, monitor: Optional[str]) -> List[LRSchedulerConfig]:
     """Convert each scheduler into `LRSchedulerConfig` with relevant information, when using automatic optimization."""
     lr_scheduler_configs = []
     for scheduler in schedulers:
@@ -302,7 +301,7 @@ def _configure_schedulers_automatic_opt(schedulers: list, monitor: Optional[str]
     return lr_scheduler_configs
 
 
-def _configure_schedulers_manual_opt(schedulers: list) -> list[LRSchedulerConfig]:
+def _configure_schedulers_manual_opt(schedulers: list) -> List[LRSchedulerConfig]:
     """Convert each scheduler into `LRSchedulerConfig` structure with relevant information, when using manual
     optimization."""
     lr_scheduler_configs = []
@@ -327,7 +326,7 @@ def _configure_schedulers_manual_opt(schedulers: list) -> list[LRSchedulerConfig
     return lr_scheduler_configs
 
 
-def _validate_scheduler_api(lr_scheduler_configs: list[LRSchedulerConfig], model: "pl.LightningModule") -> None:
+def _validate_scheduler_api(lr_scheduler_configs: List[LRSchedulerConfig], model: "pl.LightningModule") -> None:
     for config in lr_scheduler_configs:
         scheduler = config.scheduler
         if not isinstance(scheduler, _Stateful):
@@ -348,7 +347,7 @@ def _validate_scheduler_api(lr_scheduler_configs: list[LRSchedulerConfig], model
             )
 
 
-def _validate_multiple_optimizers_support(optimizers: list[Optimizer], model: "pl.LightningModule") -> None:
+def _validate_multiple_optimizers_support(optimizers: List[Optimizer], model: "pl.LightningModule") -> None:
     if is_param_in_hook_signature(model.training_step, "optimizer_idx", explicit=True):
         raise RuntimeError(
             "Training with multiple optimizers is only supported with manual optimization. Remove the `optimizer_idx`"
@@ -363,7 +362,7 @@ def _validate_multiple_optimizers_support(optimizers: list[Optimizer], model: "p
         )
 
 
-def _validate_optimizers_attached(optimizers: list[Optimizer], lr_scheduler_configs: list[LRSchedulerConfig]) -> None:
+def _validate_optimizers_attached(optimizers: List[Optimizer], lr_scheduler_configs: List[LRSchedulerConfig]) -> None:
     for config in lr_scheduler_configs:
         if config.scheduler.optimizer not in optimizers:
             raise MisconfigurationException(
@@ -371,7 +370,7 @@ def _validate_optimizers_attached(optimizers: list[Optimizer], lr_scheduler_conf
             )
 
 
-def _validate_optim_conf(optim_conf: dict[str, Any]) -> None:
+def _validate_optim_conf(optim_conf: Dict[str, Any]) -> None:
     valid_keys = {"optimizer", "lr_scheduler", "monitor"}
     extra_keys = optim_conf.keys() - valid_keys
     if extra_keys:
@@ -388,15 +387,15 @@ class _MockOptimizer(Optimizer):
         super().__init__([torch.zeros(1)], {})
 
     @override
-    def add_param_group(self, param_group: dict[Any, Any]) -> None:
+    def add_param_group(self, param_group: Dict[Any, Any]) -> None:
         pass  # Do Nothing
 
     @override
-    def load_state_dict(self, state_dict: dict[Any, Any]) -> None:
+    def load_state_dict(self, state_dict: Dict[Any, Any]) -> None:
         pass  # Do Nothing
 
     @override
-    def state_dict(self) -> dict[str, Any]:
+    def state_dict(self) -> Dict[str, Any]:
         return {}  # Return Empty
 
     @overload

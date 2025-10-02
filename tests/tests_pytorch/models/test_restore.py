@@ -15,9 +15,8 @@ import glob
 import logging as log
 import os
 import pickle
-from collections.abc import Mapping
 from copy import deepcopy
-from typing import Generic, TypeVar
+from typing import Generic, Mapping, TypeVar
 
 import cloudpickle
 import pytest

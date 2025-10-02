@@ -11,8 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from contextlib import AbstractContextManager
-from typing import Any, Literal
+from typing import Any, ContextManager, Literal
 
 import torch
 from lightning_utilities.core.apply_func import apply_to_collection
@@ -43,15 +42,15 @@ class HalfPrecision(Precision):
         return module.to(dtype=self._desired_input_dtype)
 
     @override
-    def tensor_init_context(self) -> AbstractContextManager:
+    def tensor_init_context(self) -> ContextManager:
         return _DtypeContextManager(self._desired_input_dtype)
 
     @override
-    def module_init_context(self) -> AbstractContextManager:
+    def module_init_context(self) -> ContextManager:
         return self.tensor_init_context()
 
     @override
-    def forward_context(self) -> AbstractContextManager:
+    def forward_context(self) -> ContextManager:
         return self.tensor_init_context()
 
     @override

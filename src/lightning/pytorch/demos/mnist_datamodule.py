@@ -16,8 +16,7 @@ import os
 import random
 import time
 import urllib
-from collections.abc import Sized
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Optional, Sized, Tuple, Union
 from urllib.error import HTTPError
 from warnings import warn
 
@@ -64,7 +63,7 @@ class _MNIST(Dataset):
         data_file = self.TRAIN_FILE_NAME if self.train else self.TEST_FILE_NAME
         self.data, self.targets = self._try_load(os.path.join(self.cached_folder_path, data_file))
 
-    def __getitem__(self, idx: int) -> tuple[Tensor, int]:
+    def __getitem__(self, idx: int) -> Tuple[Tensor, int]:
         img = self.data[idx].float().unsqueeze(0)
         target = int(self.targets[idx])
 
@@ -100,7 +99,7 @@ class _MNIST(Dataset):
             urllib.request.urlretrieve(url, fpath)  # noqa: S310
 
     @staticmethod
-    def _try_load(path_data: str, trials: int = 30, delta: float = 1.0) -> tuple[Tensor, Tensor]:
+    def _try_load(path_data: str, trials: int = 30, delta: float = 1.0) -> Tuple[Tensor, Tensor]:
         """Resolving loading from the same time from multiple concurrent processes."""
         res, exception = None, None
         assert trials, "at least some trial has to be set"

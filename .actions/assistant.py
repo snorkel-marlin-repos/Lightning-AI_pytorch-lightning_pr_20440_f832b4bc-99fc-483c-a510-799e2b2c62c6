@@ -18,11 +18,10 @@ import re
 import shutil
 import tempfile
 import urllib.request
-from collections.abc import Iterable, Iterator, Sequence
 from itertools import chain
 from os.path import dirname, isfile
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Dict, Iterable, Iterator, List, Optional, Sequence, Tuple
 
 from packaging.requirements import Requirement
 from packaging.version import Version
@@ -128,7 +127,7 @@ def _parse_requirements(lines: Iterable[str]) -> Iterator[_RequirementWithCommen
         pip_argument = None
 
 
-def load_requirements(path_dir: str, file_name: str = "base.txt", unfreeze: str = "all") -> list[str]:
+def load_requirements(path_dir: str, file_name: str = "base.txt", unfreeze: str = "all") -> List[str]:
     """Loading requirements from a file.
 
     >>> path_req = os.path.join(_PROJECT_ROOT, "requirements")
@@ -223,7 +222,7 @@ def _load_aggregate_requirements(req_dir: str = "requirements", freeze_requireme
         fp.writelines([ln + os.linesep for ln in requires] + [os.linesep])
 
 
-def _retrieve_files(directory: str, *ext: str) -> list[str]:
+def _retrieve_files(directory: str, *ext: str) -> List[str]:
     all_files = []
     for root, _, files in os.walk(directory):
         for fname in files:
@@ -233,7 +232,7 @@ def _retrieve_files(directory: str, *ext: str) -> list[str]:
     return all_files
 
 
-def _replace_imports(lines: list[str], mapping: list[tuple[str, str]], lightning_by: str = "") -> list[str]:
+def _replace_imports(lines: List[str], mapping: List[Tuple[str, str]], lightning_by: str = "") -> List[str]:
     """Replace imports of standalone package to lightning.
 
     >>> lns = [
@@ -321,7 +320,7 @@ def copy_replace_imports(
             fo.writelines(lines)
 
 
-def create_mirror_package(source_dir: str, package_mapping: dict[str, str]) -> None:
+def create_mirror_package(source_dir: str, package_mapping: Dict[str, str]) -> None:
     """Create a mirror package with adjusted imports."""
     # replace imports and copy the code
     mapping = package_mapping.copy()

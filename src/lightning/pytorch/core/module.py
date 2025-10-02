@@ -16,7 +16,6 @@
 import logging
 import numbers
 import weakref
-from collections.abc import Generator, Mapping, Sequence
 from contextlib import contextmanager
 from io import BytesIO
 from pathlib import Path
@@ -25,8 +24,14 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    Dict,
+    Generator,
+    List,
     Literal,
+    Mapping,
     Optional,
+    Sequence,
+    Tuple,
     Union,
     cast,
     overload,
@@ -81,7 +86,7 @@ warning_cache = WarningCache()
 log = logging.getLogger(__name__)
 
 MODULE_OPTIMIZERS = Union[
-    Optimizer, LightningOptimizer, _FabricOptimizer, list[Optimizer], list[LightningOptimizer], list[_FabricOptimizer]
+    Optimizer, LightningOptimizer, _FabricOptimizer, List[Optimizer], List[LightningOptimizer], List[_FabricOptimizer]
 ]
 
 
@@ -95,7 +100,7 @@ class LightningModule(
 ):
     # Below is for property support of JIT
     # since none of these are important when using JIT, we are going to ignore them.
-    __jit_unused_properties__: list[str] = (
+    __jit_unused_properties__: List[str] = (
         [
             "example_input_array",
             "on_gpu",
@@ -127,19 +132,19 @@ class LightningModule(
         self._trainer: Optional[pl.Trainer] = None
 
         # attributes that can be set by user
-        self._example_input_array: Optional[Union[Tensor, tuple, dict]] = None
+        self._example_input_array: Optional[Union[Tensor, Tuple, Dict]] = None
         self._automatic_optimization: bool = True
         self._strict_loading: Optional[bool] = None
 
         # attributes used internally
         self._current_fx_name: Optional[str] = None
-        self._param_requires_grad_state: dict[str, bool] = {}
-        self._metric_attributes: Optional[dict[int, str]] = None
-        self._compiler_ctx: Optional[dict[str, Any]] = None
+        self._param_requires_grad_state: Dict[str, bool] = {}
+        self._metric_attributes: Optional[Dict[int, str]] = None
+        self._compiler_ctx: Optional[Dict[str, Any]] = None
 
         # attributes only used when using fabric
         self._fabric: Optional[lf.Fabric] = None
-        self._fabric_optimizers: list[_FabricOptimizer] = []
+        self._fabric_optimizers: List[_FabricOptimizer] = []
 
         # access to device mesh in `conigure_model()` hook
         self._device_mesh: Optional[DeviceMesh] = None
@@ -147,10 +152,10 @@ class LightningModule(
     @overload
     def optimizers(
         self, use_pl_optimizer: Literal[True] = True
-    ) -> Union[LightningOptimizer, list[LightningOptimizer]]: ...
+    ) -> Union[LightningOptimizer, List[LightningOptimizer]]: ...
 
     @overload
-    def optimizers(self, use_pl_optimizer: Literal[False]) -> Union[Optimizer, list[Optimizer]]: ...
+    def optimizers(self, use_pl_optimizer: Literal[False]) -> Union[Optimizer, List[Optimizer]]: ...
 
     @overload
     def optimizers(self, use_pl_optimizer: bool) -> MODULE_OPTIMIZERS: ...
@@ -185,7 +190,7 @@ class LightningModule(
         # multiple opts
         return opts
 
-    def lr_schedulers(self) -> Union[None, list[LRSchedulerPLType], LRSchedulerPLType]:
+    def lr_schedulers(self) -> Union[None, List[LRSchedulerPLType], LRSchedulerPLType]:
         """Returns the learning rate scheduler(s) that are being used during training. Useful for manual optimization.
 
         Returns:
@@ -197,7 +202,7 @@ class LightningModule(
             return None
 
         # ignore other keys "interval", "frequency", etc.
-        lr_schedulers: list[LRSchedulerPLType] = [config.scheduler for config in self.trainer.lr_scheduler_configs]
+        lr_schedulers: List[LRSchedulerPLType] = [config.scheduler for config in self.trainer.lr_scheduler_configs]
 
         # single scheduler
         if len(lr_schedulers) == 1:
@@ -235,7 +240,7 @@ class LightningModule(
         self._fabric = fabric
 
     @property
-    def example_input_array(self) -> Optional[Union[Tensor, tuple, dict]]:
+    def example_input_array(self) -> Optional[Union[Tensor, Tuple, Dict]]:
         """The example input array is a specification of what the module can consume in the :meth:`forward` method. The
         return type is interpreted as follows:
 
@@ -250,7 +255,7 @@ class LightningModule(
         return self._example_input_array
 
     @example_input_array.setter
-    def example_input_array(self, example: Optional[Union[Tensor, tuple, dict]]) -> None:
+    def example_input_array(self, example: Optional[Union[Tensor, Tuple, Dict]]) -> None:
         self._example_input_array = example
 
     @property
@@ -313,7 +318,7 @@ class LightningModule(
         return self._trainer.logger if self._trainer is not None else None
 
     @property
-    def loggers(self) -> Union[list[Logger], list[FabricLogger]]:
+    def loggers(self) -> Union[List[Logger], List[FabricLogger]]:
         """Reference to the list of loggers in the Trainer."""
         if self._fabric is not None:
             return self._fabric.loggers
@@ -594,7 +599,7 @@ class LightningModule(
         if self._fabric is not None:
             return self._log_dict_through_fabric(dictionary=dictionary, logger=logger)
 
-        kwargs: dict[str, bool] = {}
+        kwargs: Dict[str, bool] = {}
 
         if isinstance(dictionary, MetricCollection):
             kwargs["keep_base"] = False
@@ -660,8 +665,8 @@ class LightningModule(
         return value
 
     def all_gather(
-        self, data: Union[Tensor, dict, list, tuple], group: Optional[Any] = None, sync_grads: bool = False
-    ) -> Union[Tensor, dict, list, tuple]:
+        self, data: Union[Tensor, Dict, List, Tuple], group: Optional[Any] = None, sync_grads: bool = False
+    ) -> Union[Tensor, Dict, List, Tuple]:
         r"""Gather tensors or collections of tensors from multiple processes.
 
         This method needs to be called on all processes and the tensors need to have the same shape across all
@@ -1412,7 +1417,7 @@ class LightningModule(
         method: Optional[str] = "script",
         example_inputs: Optional[Any] = None,
         **kwargs: Any,
-    ) -> Union[ScriptModule, dict[str, ScriptModule]]:
+    ) -> Union[ScriptModule, Dict[str, ScriptModule]]:
         """By default compiles the whole model to a :class:`~torch.jit.ScriptModule`. If you want to use tracing,
         please provided the argument ``method='trace'`` and make sure that either the `example_inputs` argument is
         provided, or the model has :attr:`example_input_array` set. If you would like to customize the modules that are
@@ -1589,7 +1594,7 @@ class LightningModule(
         return cast(Self, loaded)
 
     @override
-    def __getstate__(self) -> dict[str, Any]:
+    def __getstate__(self) -> Dict[str, Any]:
         state = dict(self.__dict__)
         state["_trainer"] = None
         return state

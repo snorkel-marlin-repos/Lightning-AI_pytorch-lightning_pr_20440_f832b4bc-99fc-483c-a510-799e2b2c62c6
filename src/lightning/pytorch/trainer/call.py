@@ -14,7 +14,7 @@
 import logging
 import signal
 from copy import deepcopy
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Dict, Optional, Type, Union
 
 from packaging.version import Version
 
@@ -115,11 +115,7 @@ def _call_configure_model(trainer: "pl.Trainer") -> None:
     # we don't normally check for this before calling the hook. it is done here to avoid instantiating the context
     # managers
     if is_overridden("configure_model", trainer.lightning_module):
-        with (
-            trainer.strategy.tensor_init_context(),
-            trainer.strategy.model_sharded_context(),
-            trainer.precision_plugin.module_init_context(),
-        ):
+        with trainer.strategy.tensor_init_context(), trainer.strategy.model_sharded_context(), trainer.precision_plugin.module_init_context():  # noqa: E501
             _call_lightning_module_hook(trainer, "configure_model")
 
 
@@ -226,7 +222,7 @@ def _call_callback_hooks(
         pl_module._current_fx_name = prev_fx_name
 
 
-def _call_callbacks_state_dict(trainer: "pl.Trainer") -> dict[str, dict]:
+def _call_callbacks_state_dict(trainer: "pl.Trainer") -> Dict[str, dict]:
     """Called when saving a model checkpoint, calls and returns every callback's `state_dict`, keyed by
     `Callback.state_key`."""
     callback_state_dicts = {}
@@ -237,7 +233,7 @@ def _call_callbacks_state_dict(trainer: "pl.Trainer") -> dict[str, dict]:
     return callback_state_dicts
 
 
-def _call_callbacks_on_save_checkpoint(trainer: "pl.Trainer", checkpoint: dict[str, Any]) -> None:
+def _call_callbacks_on_save_checkpoint(trainer: "pl.Trainer", checkpoint: Dict[str, Any]) -> None:
     """Called when saving a model checkpoint, calls every callback's `on_save_checkpoint` hook."""
     pl_module = trainer.lightning_module
     if pl_module:
@@ -253,7 +249,7 @@ def _call_callbacks_on_save_checkpoint(trainer: "pl.Trainer", checkpoint: dict[s
         pl_module._current_fx_name = prev_fx_name
 
 
-def _call_callbacks_on_load_checkpoint(trainer: "pl.Trainer", checkpoint: dict[str, Any]) -> None:
+def _call_callbacks_on_load_checkpoint(trainer: "pl.Trainer", checkpoint: Dict[str, Any]) -> None:
     """Called when loading a model checkpoint.
 
     Calls every callback's `on_load_checkpoint` hook. We have a dedicated function for this rather than using
@@ -265,7 +261,7 @@ def _call_callbacks_on_load_checkpoint(trainer: "pl.Trainer", checkpoint: dict[s
         prev_fx_name = pl_module._current_fx_name
         pl_module._current_fx_name = "on_load_checkpoint"
 
-    callback_states: Optional[dict[Union[type, str], dict]] = checkpoint.get("callbacks")
+    callback_states: Optional[Dict[Union[Type, str], Dict]] = checkpoint.get("callbacks")
 
     if callback_states is None:
         return
@@ -289,9 +285,9 @@ def _call_callbacks_on_load_checkpoint(trainer: "pl.Trainer", checkpoint: dict[s
         pl_module._current_fx_name = prev_fx_name
 
 
-def _call_callbacks_load_state_dict(trainer: "pl.Trainer", checkpoint: dict[str, Any]) -> None:
+def _call_callbacks_load_state_dict(trainer: "pl.Trainer", checkpoint: Dict[str, Any]) -> None:
     """Called when loading a model checkpoint, calls every callback's `load_state_dict`."""
-    callback_states: Optional[dict[Union[type, str], dict]] = checkpoint.get("callbacks")
+    callback_states: Optional[Dict[Union[Type, str], Dict]] = checkpoint.get("callbacks")
 
     if callback_states is None:
         return

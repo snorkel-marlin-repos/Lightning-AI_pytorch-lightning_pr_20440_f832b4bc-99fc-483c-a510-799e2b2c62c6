@@ -1,3 +1,5 @@
+from typing import Dict
+
 import pytest
 import torch
 from lightning.pytorch import Trainer
@@ -19,7 +21,7 @@ class ServableBoringModel(BoringModel, ServableModule):
 
         return {"x": deserialize}, {"output": serialize}
 
-    def serve_step(self, x: Tensor) -> dict[str, Tensor]:
+    def serve_step(self, x: Tensor) -> Dict[str, Tensor]:
         assert torch.equal(x, torch.arange(32, dtype=torch.float))
         return {"output": torch.tensor([0, 1])}
 

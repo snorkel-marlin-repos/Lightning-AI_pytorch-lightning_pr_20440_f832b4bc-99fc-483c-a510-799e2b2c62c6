@@ -12,9 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import inspect
-from collections.abc import Generator
-from contextlib import AbstractContextManager, contextmanager
-from typing import Any, Callable, Optional
+from contextlib import contextmanager
+from typing import Any, Callable, ContextManager, Generator, Optional, Tuple, Type
 
 import torch
 import torch.distributed as dist
@@ -53,7 +52,7 @@ def _parse_loop_limits(
     min_epochs: Optional[int],
     max_epochs: Optional[int],
     trainer: "pl.Trainer",
-) -> tuple[int, int]:
+) -> Tuple[int, int]:
     """This utility computes the default values for the minimum and maximum number of steps and epochs given the values
     the user has selected.
 
@@ -160,7 +159,7 @@ def _no_grad_context(loop_run: Callable) -> Callable:
             raise TypeError(f"`{type(self).__name__}` needs to be a Loop.")
         if not hasattr(self, "inference_mode"):
             raise TypeError(f"`{type(self).__name__}.inference_mode` needs to be defined")
-        context_manager: type[AbstractContextManager]
+        context_manager: Type[ContextManager]
         if _distributed_is_initialized() and dist.get_backend() == "gloo":
             # gloo backend does not work properly.
             # https://github.com/Lightning-AI/lightning/pull/12715/files#r854569110
@@ -182,7 +181,7 @@ def _no_grad_context(loop_run: Callable) -> Callable:
 
 
 def _verify_dataloader_idx_requirement(
-    hooks: tuple[str, ...], is_expected: bool, stage: RunningStage, pl_module: "pl.LightningModule"
+    hooks: Tuple[str, ...], is_expected: bool, stage: RunningStage, pl_module: "pl.LightningModule"
 ) -> None:
     for hook in hooks:
         fx = getattr(pl_module, hook)

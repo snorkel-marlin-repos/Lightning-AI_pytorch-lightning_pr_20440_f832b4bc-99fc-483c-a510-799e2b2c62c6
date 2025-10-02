@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from collections import Counter
-from collections.abc import Iterator
-from typing import Any
+from typing import Any, Iterator
 
 import pytest
 import torch
