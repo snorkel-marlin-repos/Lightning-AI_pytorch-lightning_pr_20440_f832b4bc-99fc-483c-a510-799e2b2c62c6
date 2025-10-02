@@ -12,10 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-from collections.abc import Iterator
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Dict, Iterator
 from unittest.mock import ANY, Mock
 
 import pytest
@@ -88,10 +87,10 @@ def test_loop_restore():
 
             self.outputs.append(value)
 
-        def state_dict(self) -> dict:
+        def state_dict(self) -> Dict:
             return {"iteration_count": self.iteration_count, "outputs": self.outputs}
 
-        def load_state_dict(self, state_dict: dict) -> None:
+        def load_state_dict(self, state_dict: Dict) -> None:
             self.iteration_count = state_dict["iteration_count"]
             self.outputs = state_dict["outputs"]
 
@@ -141,10 +140,10 @@ def test_loop_hierarchy():
                 return
             loop.run()
 
-        def on_save_checkpoint(self) -> dict:
+        def on_save_checkpoint(self) -> Dict:
             return {"a": self.a}
 
-        def on_load_checkpoint(self, state_dict: dict) -> None:
+        def on_load_checkpoint(self, state_dict: Dict) -> None:
             self.a = state_dict["a"]
 
     trainer = Trainer()

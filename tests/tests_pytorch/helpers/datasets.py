@@ -16,8 +16,7 @@ import os
 import random
 import time
 import urllib.request
-from collections.abc import Sequence
-from typing import Optional
+from typing import Optional, Sequence, Tuple
 
 import torch
 from torch import Tensor
@@ -64,7 +63,7 @@ class MNIST(Dataset):
         data_file = self.TRAIN_FILE_NAME if self.train else self.TEST_FILE_NAME
         self.data, self.targets = self._try_load(os.path.join(self.cached_folder_path, data_file))
 
-    def __getitem__(self, idx: int) -> tuple[Tensor, int]:
+    def __getitem__(self, idx: int) -> Tuple[Tensor, int]:
         img = self.data[idx].float().unsqueeze(0)
         target = int(self.targets[idx])
 

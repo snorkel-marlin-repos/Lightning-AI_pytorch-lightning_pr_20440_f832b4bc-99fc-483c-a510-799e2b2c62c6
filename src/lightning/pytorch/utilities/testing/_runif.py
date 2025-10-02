@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Optional
+from typing import Dict, List, Optional, Tuple
 
 from lightning_utilities.core.imports import RequirementCache
 
@@ -42,7 +42,7 @@ def _runif_reasons(
     psutil: bool = False,
     sklearn: bool = False,
     onnx: bool = False,
-) -> tuple[list[str], dict[str, bool]]:
+) -> Tuple[List[str], Dict[str, bool]]:
     """Construct reasons for pytest skipif.
 
     Args:

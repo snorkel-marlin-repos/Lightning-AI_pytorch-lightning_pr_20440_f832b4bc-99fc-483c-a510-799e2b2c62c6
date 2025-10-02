@@ -17,9 +17,8 @@ import copy
 import inspect
 import pickle
 import types
-from collections.abc import MutableMapping, Sequence
 from dataclasses import fields, is_dataclass
-from typing import Any, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, MutableMapping, Optional, Sequence, Tuple, Type, Union
 
 from torch import nn
 
@@ -49,7 +48,7 @@ def clean_namespace(hparams: MutableMapping) -> None:
         del hparams[k]
 
 
-def parse_class_init_keys(cls: type) -> tuple[str, Optional[str], Optional[str]]:
+def parse_class_init_keys(cls: Type) -> Tuple[str, Optional[str], Optional[str]]:
     """Parse key words for standard ``self``, ``*args`` and ``**kwargs``.
 
     Examples:
@@ -61,7 +60,7 @@ def parse_class_init_keys(cls: type) -> tuple[str, Optional[str], Optional[str]]
         ('self', 'my_args', 'my_kwargs')
 
     """
-    init_parameters = inspect.signature(cls.__init__).parameters  # type: ignore[misc]
+    init_parameters = inspect.signature(cls.__init__).parameters
     # docs claims the params are always ordered
     # https://docs.python.org/3/library/inspect.html#inspect.Signature.parameters
     init_params = list(init_parameters.values())
@@ -69,7 +68,7 @@ def parse_class_init_keys(cls: type) -> tuple[str, Optional[str], Optional[str]]
     n_self = init_params[0].name
 
     def _get_first_if_any(
-        params: list[inspect.Parameter],
+        params: List[inspect.Parameter],
         param_type: Literal[inspect._ParameterKind.VAR_POSITIONAL, inspect._ParameterKind.VAR_KEYWORD],
     ) -> Optional[str]:
         for p in params:
@@ -83,13 +82,13 @@ def parse_class_init_keys(cls: type) -> tuple[str, Optional[str], Optional[str]]
     return n_self, n_args, n_kwargs
 
 
-def get_init_args(frame: types.FrameType) -> dict[str, Any]:  # pragma: no-cover
+def get_init_args(frame: types.FrameType) -> Dict[str, Any]:  # pragma: no-cover
     """For backwards compatibility: #16369."""
     _, local_args = _get_init_args(frame)
     return local_args
 
 
-def _get_init_args(frame: types.FrameType) -> tuple[Optional[Any], dict[str, Any]]:
+def _get_init_args(frame: types.FrameType) -> Tuple[Optional[Any], Dict[str, Any]]:
     _, _, _, local_vars = inspect.getargvalues(frame)
     if "__class__" not in local_vars:
         return None, {}
@@ -110,10 +109,10 @@ def _get_init_args(frame: types.FrameType) -> tuple[Optional[Any], dict[str, Any
 
 def collect_init_args(
     frame: types.FrameType,
-    path_args: list[dict[str, Any]],
+    path_args: List[Dict[str, Any]],
     inside: bool = False,
-    classes: tuple[type, ...] = (),
-) -> list[dict[str, Any]]:
+    classes: Tuple[Type, ...] = (),
+) -> List[Dict[str, Any]]:
     """Recursively collects the arguments passed to the child constructors in the inheritance tree.
 
     Args:
@@ -148,7 +147,7 @@ def save_hyperparameters(
     *args: Any,
     ignore: Optional[Union[Sequence[str], str]] = None,
     frame: Optional[types.FrameType] = None,
-    given_hparams: Optional[dict[str, Any]] = None,
+    given_hparams: Optional[Dict[str, Any]] = None,
 ) -> None:
     """See :meth:`~lightning.pytorch.LightningModule.save_hyperparameters`"""
 
@@ -233,14 +232,14 @@ class AttributeDict(_AttributeDict):
     """
 
 
-def _lightning_get_all_attr_holders(model: "pl.LightningModule", attribute: str) -> list[Any]:
+def _lightning_get_all_attr_holders(model: "pl.LightningModule", attribute: str) -> List[Any]:
     """Special attribute finding for Lightning.
 
     Gets all of the objects or dicts that holds attribute. Checks for attribute in model namespace, the old hparams
     namespace/dict, and the datamodule.
 
     """
-    holders: list[Any] = []
+    holders: List[Any] = []
 
     # Check if attribute in model
     if hasattr(model, attribute):

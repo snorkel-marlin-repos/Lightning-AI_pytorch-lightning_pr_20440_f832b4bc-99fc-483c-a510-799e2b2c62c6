@@ -13,9 +13,8 @@
 # limitations under the License.
 import logging
 import os
-from contextlib import AbstractContextManager
 from pathlib import Path
-from typing import Optional
+from typing import ContextManager, Optional
 from unittest import mock
 
 import pytest
@@ -383,5 +382,5 @@ def test_misconfiguration_error_with_sharded_model(tmp_path, strategy: str):
         trainer.fit(model)
 
 
-def _backward_patch(trainer: Trainer) -> AbstractContextManager:
+def _backward_patch(trainer: Trainer) -> ContextManager:
     return mock.patch.object(Strategy, "backward", wraps=trainer.strategy.backward)

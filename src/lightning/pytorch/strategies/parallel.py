@@ -12,9 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from abc import ABC, abstractmethod
-from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Any, Optional
+from typing import Any, Dict, Generator, List, Optional
 
 import torch
 from torch import Tensor
@@ -34,7 +33,7 @@ class ParallelStrategy(Strategy, ABC):
     def __init__(
         self,
         accelerator: Optional["pl.accelerators.Accelerator"] = None,
-        parallel_devices: Optional[list[torch.device]] = None,
+        parallel_devices: Optional[List[torch.device]] = None,
         cluster_environment: Optional[ClusterEnvironment] = None,
         checkpoint_io: Optional[CheckpointIO] = None,
         precision_plugin: Optional[Precision] = None,
@@ -72,15 +71,15 @@ class ParallelStrategy(Strategy, ABC):
         return self.global_rank == 0
 
     @property
-    def parallel_devices(self) -> Optional[list[torch.device]]:
+    def parallel_devices(self) -> Optional[List[torch.device]]:
         return self._parallel_devices
 
     @parallel_devices.setter
-    def parallel_devices(self, parallel_devices: Optional[list[torch.device]]) -> None:
+    def parallel_devices(self, parallel_devices: Optional[List[torch.device]]) -> None:
         self._parallel_devices = parallel_devices
 
     @property
-    def distributed_sampler_kwargs(self) -> dict[str, Any]:
+    def distributed_sampler_kwargs(self) -> Dict[str, Any]:
         return {
             "num_replicas": len(self.parallel_devices) if self.parallel_devices is not None else 0,
             "rank": self.global_rank,

@@ -45,10 +45,9 @@ import glob
 import logging
 import os
 import tempfile
-from collections.abc import Generator, Mapping
 from importlib.util import module_from_spec, spec_from_file_location
 from types import ModuleType
-from typing import Optional
+from typing import Generator, Mapping, Optional
 
 import setuptools
 import setuptools.command.egg_info
